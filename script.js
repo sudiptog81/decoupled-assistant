@@ -48,8 +48,7 @@ recognition.onresult = (event) => {
         new SpeechSynthesisUtterance(`looking for a colour`)
       );
       fetch(
-        'https://cors-anywhere.herokuapp.com/' +
-        'https://decoupled-assistant.netlify.app/.netlify/functions/colour'
+        '/.netlify/functions/colour'
       )
         .then(r => r.json())
         .then(d => {
