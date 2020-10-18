@@ -12,7 +12,7 @@ exports.handler = async (event, context) => {
   return {
     statusCode: 200,
     body: JSON.stringify({
-      data: colours[Math.floor(Math.random(colours.length))]
+      data: colours[Math.floor(Math.random() * colours.length)]
     })
   };
 };

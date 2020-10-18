@@ -5,51 +5,88 @@ const SpeechRecognition = webkitSpeechRecognition || SpeechRecognition;
 const SpeechGrammarList = webkitSpeechGrammarList || SpeechGrammarList;
 const SpeechRecognitionEvent = webkitSpeechRecognitionEvent || SpeechRecognitionEvent;
 
-const grammar = `
-#JSGF V1.0;
-grammar trigger;
-public <trigger> = food | colour;
-`;
+const startAudio = new Audio('./on.mp3');
+const stopAudio = new Audio('./off.mp3');
 
 const recognition = new SpeechRecognition();
-const speechRecognitionList = new SpeechGrammarList();
-
-speechRecognitionList.addFromString(grammar, 1);
-
-recognition.grammars = speechRecognitionList;
-recognition.continuous = false;
 recognition.lang = 'en-IN';
-recognition.interimResults = false;
-recognition.maxAlternatives = 0;
+
+const SpeechSynthesis = window.speechSynthesis;
+
+const handleInvalidTrigger = () => {
+  speakBtn.classList.toggle('danger');
+  textLbl.textContent = `invalid phrase`;
+  SpeechSynthesis.speak(
+    new SpeechSynthesisUtterance('invalid phrase')
+  );
+  setTimeout(() => {
+    speakBtn.disabled = false;
+    speakBtn.classList.toggle('danger');
+    textLbl.textContent = `press tap to speak`;
+  }, 3000);
+};
+
+const resetButton = () => {
+  setTimeout(() => {
+    speakBtn.disabled = false;
+    textLbl.textContent = `press tap to speak`;
+  }, 3000);
+};
 
 recognition.onstart = () => {
   speakBtn.disabled = true;
+  startAudio.play();
   textLbl.textContent = `listening`;
-  console.log('Ready');
   speakBtn.classList.toggle('listening');
 };
 
 recognition.onresult = (event) => {
   let result = event.results[0][0].transcript;
   if (result.includes('food') || result.includes('colour')) {
-    textLbl.textContent = `i heard say ${result}`;
-    setTimeout(() => {
-      speakBtn.disabled = false;
-      textLbl.textContent = `press tap to speak`;
-    }, 3000);
+    if (result.includes('colour')) {
+      SpeechSynthesis.speak(
+        new SpeechSynthesisUtterance(`looking for a colour`)
+      );
+      fetch(
+        'https://cors-anywhere.herokuapp.com/' +
+        'https://decoupled-assistant.netlify.app/.netlify/functions/colour'
+      )
+        .then(r => r.json())
+        .then(d => {
+          textLbl.textContent = `i think ${d.data} is a good colour`;
+          SpeechSynthesis.speak(
+            new SpeechSynthesisUtterance(`i think ${d.data} is a good colour`)
+          );
+          resetButton();
+        });
+    } else {
+      textLbl.textContent = `i can not cook a food item`;
+      SpeechSynthesis.speak(
+        new SpeechSynthesisUtterance(`i can not cook a food item`)
+      );
+      resetButton();
+    }
   } else {
-    speakBtn.classList.toggle('danger');
-    textLbl.textContent = `i could not hear a valid phrase`;
-    setTimeout(() => {
-      speakBtn.disabled = false;
-      speakBtn.classList.toggle('danger');
-      textLbl.textContent = `press tap to speak`;
-    }, 3000);
+    handleInvalidTrigger();
   };
+};
+
+recognition.onnomatch = handleInvalidTrigger;
+
+recognition.onerror = () => {
+  speakBtn.classList.toggle('listening');
+  speakBtn.classList.toggle('danger');
+  textLbl.textContent = `i could not hear you`;
+  setTimeout(() => {
+    speakBtn.disabled = false;
+    speakBtn.classList.toggle('danger');
+    textLbl.textContent = `press tap to speak`;
+  }, 3000);
 };
 
 recognition.onspeechend = () => {
   speakBtn.classList.toggle('listening');
+  stopAudio.play();
   recognition.stop();
 };
 
